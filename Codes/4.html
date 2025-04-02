@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Write a java program to determine if the IP address is in Class A, B, C, D, or E. . </title>
+</head>
+<body>
+    <h1>Write a java program to determine if the IP address is in Class A, B, C, D, or E. . </h1>
+    
+    <h2> IPAddressClassChecker </h2>
+    <pre><code class="language-java">
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
+public class IPAddressClassChecker {
+    public static void main(String[] args) {
+        try {
+            // Get local IP address
+            InetAddress localHost = InetAddress.getLocalHost();
+            String ipAddress = localHost.getHostAddress();
+
+            // Determine and display the class
+            String ipClass = getIPClass(ipAddress);
+            System.out.println("Your system's IP address: " + ipAddress);
+            System.out.println("It belongs to Class " + ipClass);
+
+        } catch (UnknownHostException e) {
+            System.out.println("Error retrieving IP address.");
+        }
+    }
+
+    public static String getIPClass(String ip) {
+        try {
+            String[] octets = ip.split("\\.");
+            if (octets.length != 4) return "Invalid"; // Ensure valid IPv4 format
+            
+            int firstOctet = Integer.parseInt(octets[0]);
+
+            if (firstOctet >= 1 && firstOctet <= 126) return "A";
+            if (firstOctet >= 128 && firstOctet <= 191) return "B";
+            if (firstOctet >= 192 && firstOctet <= 223) return "C";
+            if (firstOctet >= 224 && firstOctet <= 239) return "D (Multicast)";
+            if (firstOctet >= 240 && firstOctet <= 255) return "E (Experimental)";
+        } catch (NumberFormatException e) {
+            return "Invalid";
+        }
+        return "Invalid";
+    }
+}
+
+
+
+
+    </code></pre>
+ 
+</body>
+</html>

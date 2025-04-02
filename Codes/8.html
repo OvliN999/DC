@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Configure following options on server socket and tests them: SO_KEEPALIVE,
+ SO_LINGER, SO_SNDBUF, SO_RCVBUF, TCP_NODELAY  </title>
+</head>
+<body>
+    <h1>Configure following options on server socket and tests them: SO_KEEPALIVE,
+ SO_LINGER, SO_SNDBUF, SO_RCVBUF, TCP_NODELAY </h1>
+    
+    <h2> ConfiguredSocketServer</h2>
+    <pre><code class="language-java">
+import java.io.*;
+import java.net.*;
+
+public class ConfiguredSocketServer {
+    public static void main(String[] args) {
+        int port = 5000;
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            System.out.println("Server started. Waiting for client...");
+
+            // Accept client connection
+            Socket clientSocket = serverSocket.accept();
+            System.out.println("Client connected!");
+
+            // Configure socket options
+            clientSocket.setKeepAlive(true); // Enable SO_KEEPALIVE
+            clientSocket.setSoLinger(true, 5); // Enable SO_LINGER with 5 sec delay
+            clientSocket.setSendBufferSize(32 * 1024); // Set SO_SNDBUF to 32KB
+            clientSocket.setReceiveBufferSize(32 * 1024); // Set SO_RCVBUF to 32KB
+            clientSocket.setTcpNoDelay(true); // Disable Nagle’s algorithm (TCP_NODELAY)
+
+            // Display configured options
+            System.out.println("SO_KEEPALIVE: " + clientSocket.getKeepAlive());
+            System.out.println("SO_LINGER: " + clientSocket.getSoLinger());
+            System.out.println("SO_SNDBUF: " + clientSocket.getSendBufferSize());
+            System.out.println("SO_RCVBUF: " + clientSocket.getReceiveBufferSize());
+            System.out.println("TCP_NODELAY: " + clientSocket.getTcpNoDelay());
+
+            // Communicate with client
+            BufferedReader input = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            PrintWriter output = new PrintWriter(clientSocket.getOutputStream(), true);
+
+            String message;
+            while ((message = input.readLine()) != null) {
+                System.out.println("Client: " + message);
+                output.println("Server received: " + message);
+                if (message.equalsIgnoreCase("exit")) break;
+            }
+
+            System.out.println("Closing connection...");
+            clientSocket.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+
+
+    </code></pre>
+	<h2> ConfiguredSocketClient</h2>
+    <pre><code class="language-java">
+import java.io.*;
+import java.net.*;
+import java.util.Scanner;
+
+public class ConfiguredSocketClient {
+    public static void main(String[] args) {
+        String serverAddress = "localhost";
+        int port = 5000;
+
+        try (Socket socket = new Socket(serverAddress, port);
+             BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+             PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
+             Scanner scanner = new Scanner(System.in)) {
+
+            System.out.println("Connected to the server. Type a message:");
+
+            while (true) {
+                System.out.print("You: ");
+                String message = scanner.nextLine();
+                output.println(message);
+
+                if (message.equalsIgnoreCase("exit")) break;
+
+                String response = input.readLine();
+                System.out.println(response);
+            }
+
+            System.out.println("Closing connection...");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+	</code></pre>
+ 
+</body>
+</html>

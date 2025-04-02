@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trace the route that is taken when you try to access:
+ a) google.com b) msn.com c) bitmesra.ac.in</title>
+</head>
+<body>
+    <h1>Trace the route that is taken when you try to access:
+ a) google.com b) msn.com c) bitmesra.ac.in</h1>
+    
+    <h2> Traceroute.java</h2>
+    <pre><code class="language-java">
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
+public class Traceroute {
+    public static void main(String[] args) {
+        // Define the domains to trace
+        String[] domains = {"google.com", "msn.com", "bitmesra.ac.in"};
+
+        // Detect OS and choose the correct command
+        String os = System.getProperty("os.name").toLowerCase();
+        String commandPrefix = os.contains("win") ? "tracert" : "traceroute";
+
+        for (String domain : domains) {
+            System.out.println("\nTracing route to: " + domain);
+            runTraceroute(commandPrefix, domain);
+        }
+    }
+
+    private static void runTraceroute(String command, String domain) {
+        try {
+            // Execute the traceroute command
+            ProcessBuilder processBuilder = new ProcessBuilder(command, domain);
+            Process process = processBuilder.start();
+
+            // Read output from the command
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+
+            // Wait for the process to complete
+            process.waitFor();
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+
+
+
+
+    </code></pre>
+	<h2> Running</h2>
+    <pre><code class="language-java">
+javac Traceroute.java
+
+java Traceroute
+
+
+	</code></pre>
+ 
+</body>
+</html>

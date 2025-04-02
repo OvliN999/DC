@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Implement concurrent day-time client-server application. </title>
+</head>
+<body>
+    <h1>Implement concurrent day-time client-server application. </h1>
+    
+    <h2> DaytimeServer </h2>
+    <pre><code class="language-java">
+import java.io.*;
+import java.net.*;
+import java.time.LocalDateTime;
+
+public class DaytimeServer {
+    private static final int PORT = 4445;
+
+    public static void main(String[] args) {
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            System.out.println("Daytime Server listening on port " + PORT);
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                new Thread(new ClientHandler(clientSocket)).start();
+            }
+        } catch (IOException ex) {
+            System.err.println("Server error: " + ex.getMessage());
+        }
+    }
+
+    private static class ClientHandler implements Runnable {
+        private final Socket clientSocket;
+
+        public ClientHandler(Socket socket) {
+            this.clientSocket = socket;
+        }
+
+        @Override
+        public void run() {
+            try (PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
+                // Get current date/time
+                String currentTime = LocalDateTime.now().toString();
+
+                // Send response to client
+                out.println(currentTime);
+                System.out.println("Sent time to " + clientSocket.getRemoteSocketAddress());
+
+            } catch (IOException ex) {
+                System.err.println("Handler error: " + ex.getMessage());
+            } finally {
+                try {
+                    clientSocket.close();
+                } catch (IOException ex) {
+                    System.err.println("Error closing socket: " + ex.getMessage());
+                }
+            }
+        }
+    }
+}
+
+
+    </code></pre>
+
+    <h2>DaytimeClient</h2>
+    <pre><code class="language-java">
+import java.io.*;
+import java.net.*;
+
+public class DaytimeClient {
+    public static void main(String[] args) {
+        final String HOST = "localhost";
+        final int PORT = 4445;
+
+        try (Socket socket = new Socket(HOST, PORT);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+
+            // Read server response
+            String response = in.readLine();
+            if (response != null) {
+                System.out.println("Server time: " + response);
+            }
+
+        } catch (UnknownHostException ex) {
+            System.err.println("Host unknown: " + HOST);
+        } catch (IOException ex) {
+            System.err.println("I/O error: " + ex.getMessage());
+        }
+    }
+}
+
+javac DaytimeServer.java
+java DaytimeServer
+
+javac DaytimeClient.java
+java DaytimeClient
+    </code></pre>
+</body>
+</html>

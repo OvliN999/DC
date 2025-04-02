@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Write a program to send message from server to multiple clients using Socket
+ Programming.  </title>
+</head>
+<body>
+    <h1>Write a program to send message from server to multiple clients using Socket
+ Programming. </h1>
+    
+    <h2> MultiClientServer.java</h2>
+    <pre><code class="language-java">
+import java.io.*;
+import java.net.*;
+import java.util.*;
+
+public class MultiClientServer {
+    private static final int PORT = 5000;
+    private static Set<PrintWriter> clientWriters = new HashSet<>();
+
+    public static void main(String[] args) {
+        System.out.println("Server is running...");
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            while (true) {
+                // Accept client connections
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("New client connected!");
+
+                // Start a new thread for each client
+                ClientHandler clientHandler = new ClientHandler(clientSocket);
+                new Thread(clientHandler).start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    static class ClientHandler implements Runnable {
+        private Socket socket;
+        private PrintWriter out;
+        private BufferedReader in;
+
+        public ClientHandler(Socket socket) {
+            this.socket = socket;
+        }
+
+        @Override
+        public void run() {
+            try {
+                // Create I/O streams
+                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                out = new PrintWriter(socket.getOutputStream(), true);
+
+                // Add client to the list
+                synchronized (clientWriters) {
+                    clientWriters.add(out);
+                }
+
+                String message;
+                while ((message = in.readLine()) != null) {
+                    System.out.println("Client: " + message);
+                    // Broadcast message to all clients
+                    broadcastMessage("Client says: " + message);
+                }
+            } catch (IOException e) {
+                System.out.println("Client disconnected.");
+            } finally {
+                try {
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                // Remove client from the list
+                synchronized (clientWriters) {
+                    clientWriters.remove(out);
+                }
+            }
+        }
+
+        // Broadcast message to all clients
+        private void broadcastMessage(String message) {
+            synchronized (clientWriters) {
+                for (PrintWriter writer : clientWriters) {
+                    writer.println(message);
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+    </code></pre>
+	<h2> MultiClient.java</h2>
+    <pre><code class="language-java">
+	import java.io.*;
+import java.net.*;
+import java.util.Scanner;
+
+public class MultiClient {
+    public static void main(String[] args) {
+        try (Socket socket = new Socket("localhost", 5000);
+             BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+             PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
+             Scanner scanner = new Scanner(System.in)) {
+
+            System.out.println("Connected to the server. Type a message:");
+
+            // Start a separate thread to listen for server messages
+            new Thread(() -> {
+                try {
+                    String serverMessage;
+                    while ((serverMessage = input.readLine()) != null) {
+                        System.out.println(serverMessage);
+                    }
+                } catch (IOException e) {
+                    System.out.println("Server connection closed.");
+                }
+            }).start();
+
+            // Send messages to the server
+            while (true) {
+                System.out.print("You: ");
+                String message = scanner.nextLine();
+                output.println(message);
+
+                if (message.equalsIgnoreCase("exit")) {
+                    break;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+	</code></pre>
+ 
+</body>
+</html>

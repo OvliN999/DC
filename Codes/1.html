@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Concurrent Echo Client-Server</title>
+</head>
+<body>
+    <h1>Concurrent Echo Client-Server</h1>
+    
+    <h2>EchoServer.java</h2>
+    <pre><code class="language-java">
+import java.io.*;
+import java.net.*;
+
+public class EchoServer {
+    public static void main(String[] args) {
+        final int PORT = 4444;
+
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            System.out.println("Echo Server is listening on port " + PORT);
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("New client connected: " + clientSocket);
+
+                // Create new thread for each client
+                new Thread(new ClientHandler(clientSocket)).start();
+            }
+        } catch (IOException ex) {
+            System.out.println("Server exception: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
+}
+
+class ClientHandler implements Runnable {
+    private Socket clientSocket;
+
+    public ClientHandler(Socket socket) {
+        this.clientSocket = socket;
+    }
+
+    @Override
+    public void run() {
+        try (BufferedReader in = new BufferedReader(
+                new InputStreamReader(clientSocket.getInputStream()));
+             PrintWriter out = new PrintWriter(
+                clientSocket.getOutputStream(), true)) {
+
+            String inputLine;
+            while ((inputLine = in.readLine()) != null) {
+                System.out.println("Received from " + clientSocket + ": " + inputLine);
+                out.println("ECHO: " + inputLine);
+            }
+        } catch (IOException ex) {
+            System.out.println("Handler exception: " + ex.getMessage());
+        } finally {
+            try {
+                clientSocket.close();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+}
+
+
+    </code></pre>
+
+    <h2>EchoClient.java</h2>
+    <pre><code class="language-java">
+import java.io.*;
+import java.net.*;
+
+public class EchoClient {
+    public static void main(String[] args) {
+        final String HOST = "localhost";
+        final int PORT = 4444;
+        
+        try (Socket socket = new Socket(HOST, PORT);
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+             BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in))) {
+
+            System.out.println("Connected to echo server. Type 'exit' to quit.");
+
+            String userInput;
+            while ((userInput = stdIn.readLine()) != null) {
+                out.println(userInput);
+                if ("exit".equalsIgnoreCase(userInput)) break;
+
+                String response = in.readLine();
+                System.out.println("Server response: " + response);
+            }
+        } catch (UnknownHostException ex) {
+            System.err.println("Host unknown: " + HOST);
+        } catch (IOException ex) {
+            System.err.println("I/O error: " + ex.getMessage());
+        }
+    }
+}
+    <h2>Running</h2>
+javac EchoServer.java
+java EchoServer
+javac EchoClient.java
+java EchoClient    </code></pre>
+</body>
+</html>

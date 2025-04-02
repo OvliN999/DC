@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Incrementing a counter in shared memory
+  </title>
+</head>
+<body>
+    <h1>Incrementing a counter in shared memory
+ </h1>
+    
+    <h2> SharedMemoryServer.java</h2>
+    <pre><code class="language-java">
+import java.io.RandomAccessFile;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+
+public class SharedMemoryServer {
+    public static void main(String[] args) throws Exception {
+        RandomAccessFile file = new RandomAccessFile("shared_memory.dat", "rw");
+        FileChannel channel = file.getChannel();
+        MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_WRITE, 0, 4);
+
+        for (int i = 1; i <= 10; i++) {
+            buffer.putInt(0, i); // Store counter value at position 0
+            System.out.println("Server: Counter updated to " + i);
+            Thread.sleep(1000); // Simulate delay
+        }
+
+        file.close();
+    }
+}
+
+
+
+
+
+
+    </code></pre>
+	<h2> SharedMemoryClient.java</h2>
+    <pre><code class="language-java">
+import java.io.RandomAccessFile;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+
+public class SharedMemoryClient {
+    public static void main(String[] args) throws Exception {
+        RandomAccessFile file = new RandomAccessFile("shared_memory.dat", "r");
+        FileChannel channel = file.getChannel();
+        MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_ONLY, 0, 4);
+
+        int lastValue = -1;
+        while (true) {
+            int counter = buffer.getInt(0);
+            if (counter != lastValue) {
+                System.out.println("Client: Counter read as " + counter);
+                lastValue = counter;
+            }
+            Thread.sleep(500); // Reduce CPU usage
+        }
+    }
+}
+
+
+
+
+	</code></pre>
+ 
+</body>
+</html>

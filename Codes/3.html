@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Implementation of Sub-netting and Super-netting. . </title>
+</head>
+<body>
+    <h1>Implementation of Sub-netting and Super-netting. . </h1>
+    
+    <h2> DaytimeServer </h2>
+    <pre><code class="language-java">
+import java.util.ArrayList;
+import java.util.List;
+
+public class SubnetUtils {
+    public static void main(String[] args) {
+        // Subnetting example
+        IPNetwork network = new IPNetwork("192.168.1.0", 24);
+        System.out.println("Subnetting " + network);
+        List<IPNetwork> subnets = calculateSubnets(network, 4);
+        subnets.forEach(System.out::println);
+
+        // Supernetting example
+        List<IPNetwork> networks = new ArrayList<>(List.of(
+                new IPNetwork("192.168.0.0", 24),
+                new IPNetwork("192.168.1.0", 24),
+                new IPNetwork("192.168.2.0", 24),
+                new IPNetwork("192.168.3.0", 24)
+        ));
+
+        System.out.println("\nSupernetting networks:");
+        networks.forEach(System.out::println);
+
+        try {
+            IPNetwork supernet = calculateSupernet(networks);
+            System.out.println("Aggregated supernet: " + supernet);
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error: " + e.getMessage());
+        }
+    }
+
+    // Subnetting implementation
+    public static List<IPNetwork> calculateSubnets(IPNetwork parentNetwork, int numberOfSubnets) {
+        List<IPNetwork> subnets = new ArrayList<>();
+        int hostBits = 32 - parentNetwork.prefix;
+        int subnetBits = (int) Math.ceil(Math.log(numberOfSubnets) / Math.log(2));
+
+        if (subnetBits > hostBits) {
+            throw new IllegalArgumentException("Not enough host bits for subnetting.");
+        }
+
+        int newPrefix = parentNetwork.prefix + subnetBits;
+        long subnetSize = (long) Math.pow(2, 32 - newPrefix);
+        long networkStart = ipToLong(parentNetwork.networkAddress);
+
+        for (int i = 0; i < numberOfSubnets; i++) {
+            String subnetAddress = longToIp(networkStart + (i * subnetSize));
+            subnets.add(new IPNetwork(subnetAddress, newPrefix));
+        }
+        return subnets;
+    }
+
+    // Supernetting implementation
+    public static IPNetwork calculateSupernet(List<IPNetwork> networks) {
+        if (networks.isEmpty()) {
+            throw new IllegalArgumentException("Network list cannot be empty.");
+        }
+
+        // Sort networks by IP address
+        networks.sort(IPNetwork::compareTo);
+
+        // Ensure networks are contiguous
+        long previousEnd = ipToLong(networks.get(0).getLastAddress());
+        for (int i = 1; i < networks.size(); i++) {
+            long currentStart = ipToLong(networks.get(i).networkAddress);
+            if (currentStart != previousEnd + 1) {
+                throw new IllegalArgumentException("Networks are not contiguous.");
+            }
+            previousEnd = ipToLong(networks.get(i).getLastAddress());
+        }
+
+        // Find the common prefix
+        String firstBinary = getBinaryAddress(networks.get(0).networkAddress);
+        String lastBinary = getBinaryAddress(networks.get(networks.size() - 1).networkAddress);
+        int commonPrefix = 0;
+
+        while (commonPrefix < 32 && firstBinary.charAt(commonPrefix) == lastBinary.charAt(commonPrefix)) {
+            commonPrefix++;
+        }
+
+        return new IPNetwork(networks.get(0).networkAddress, commonPrefix);
+    }
+
+    // Utility methods
+    private static long ipToLong(String ipAddress) {
+        String[] octets = ipAddress.split("\\.");
+        return (Long.parseLong(octets[0]) << 24) |
+               (Long.parseLong(octets[1]) << 16) |
+               (Long.parseLong(octets[2]) << 8) |
+               Long.parseLong(octets[3]);
+    }
+
+    private static String longToIp(long ip) {
+        return ((ip >> 24) & 0xFF) + "." +
+               ((ip >> 16) & 0xFF) + "." +
+               ((ip >> 8) & 0xFF) + "." +
+               (ip & 0xFF);
+    }
+
+    private static String getBinaryAddress(String ip) {
+        long ipLong = ipToLong(ip);
+        return String.format("%32s", Long.toBinaryString(ipLong)).replace(' ', '0');
+    }
+
+    static class IPNetwork implements Comparable<IPNetwork> {
+        String networkAddress;
+        int prefix;
+
+        IPNetwork(String networkAddress, int prefix) {
+            this.networkAddress = networkAddress;
+            this.prefix = prefix;
+
+            // Validate network address
+            long ipLong = ipToLong(networkAddress);
+            long mask = (0xFFFFFFFFL << (32 - prefix));
+
+            if ((ipLong & mask) != ipLong) {
+                throw new IllegalArgumentException("Invalid network address for prefix.");
+            }
+        }
+
+        String getLastAddress() {
+            long ipLong = ipToLong(networkAddress);
+            long mask = 0xFFFFFFFFL >>> prefix;
+            return longToIp(ipLong | mask);
+        }
+
+        @Override
+        public String toString() {
+            return networkAddress + "/" + prefix + " (Mask: " + getSubnetMask() + ")";
+        }
+
+        String getSubnetMask() {
+            int mask = 0xFFFFFFFF << (32 - prefix);
+            return longToIp(mask & 0xFFFFFFFFL);
+        }
+
+        @Override
+        public int compareTo(IPNetwork o) {
+            return Long.compare(ipToLong(this.networkAddress), ipToLong(o.networkAddress));
+        }
+    }
+}
+
+
+
+    </code></pre>
+ 
+</body>
+</html>

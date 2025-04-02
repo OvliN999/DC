@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Write a program to send message from client to server and server to client using
+ TCP client/server communication. . </title>
+</head>
+<body>
+    <h1>Write a program to send message from client to server and server to client using
+ TCP client/server communication. . </h1>
+    
+    <h2> TCPServer.java </h2>
+    <pre><code class="language-java">
+import java.io.*;
+import java.net.*;
+
+public class TCPServer {
+    public static void main(String[] args) {
+        try (ServerSocket serverSocket = new ServerSocket(5000)) {
+            System.out.println("Server is waiting for a client...");
+
+            // Accept client connection
+            Socket socket = serverSocket.accept();
+            System.out.println("Client connected!");
+
+            // Streams for communication
+            BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
+
+            String message;
+            while (true) {
+                // Receive message from client
+                message = input.readLine();
+                System.out.println("Client: " + message);
+
+                // Exit if client sends "exit"
+                if (message.equalsIgnoreCase("exit")) {
+                    System.out.println("Client disconnected.");
+                    break;
+                }
+
+                // Send response
+                output.println("Server received: " + message);
+            }
+
+            // Close connections
+            socket.close();
+            System.out.println("Server closed.");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+
+
+    </code></pre>
+	<h2> TCPClient.java </h2>
+    <pre><code class="language-java">
+	import java.io.*;
+import java.net.*;
+
+public class TCPClient {
+    public static void main(String[] args) {
+        try (Socket socket = new Socket("localhost", 5000);
+             BufferedReader keyboardInput = new BufferedReader(new InputStreamReader(System.in));
+             BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+             PrintWriter output = new PrintWriter(socket.getOutputStream(), true)) {
+
+            System.out.println("Connected to server. Type a message (type 'exit' to quit):");
+
+            String message;
+            while (true) {
+                // Send message to server
+                System.out.print("You: ");
+                message = keyboardInput.readLine();
+                output.println(message);
+
+                // Exit if user types "exit"
+                if (message.equalsIgnoreCase("exit")) {
+                    break;
+                }
+
+                // Receive and print response from server
+                String serverResponse = input.readLine();
+                System.out.println(serverResponse);
+            }
+
+            System.out.println("Client disconnected.");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+	</code></pre>
+ 
+</body>
+</html>
