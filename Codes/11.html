@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Write a program to implement RPC (Remote procedure call) </title>
+</head>
+<body>
+    <h1>Write a program to implement RPC (Remote procedure call) </h1>
+    
+    <h2>RPCInterface.java</h2>
+    <pre><code class="language-java">
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+// Remote interface for RPC
+public interface RPCInterface extends Remote {
+    int add(int a, int b) throws RemoteException;
+    String sayHello(String name) throws RemoteException;
+}
+
+
+
+    </code></pre>
+
+    <h2>RPCImplementation.java</h2>
+    <pre><code class="language-java">
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+
+// Implement the remote interface
+public class RPCImplementation extends UnicastRemoteObject implements RPCInterface {
+    protected RPCImplementation() throws RemoteException {
+        super();
+    }
+
+    @Override
+    public int add(int a, int b) throws RemoteException {
+        return a + b;
+    }
+
+    @Override
+    public String sayHello(String name) throws RemoteException {
+        return "Hello, " + name + "!";
+    }
+}
+
+  </code></pre>
+  <h2>RPCServer.java</h2>
+    <pre><code class="language-java">
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+
+public class RPCServer {
+    public static void main(String[] args) {
+        try {
+            // Create and bind remote object
+            RPCImplementation obj = new RPCImplementation();
+            Registry registry = LocateRegistry.createRegistry(5000);
+            registry.rebind("RPCService", obj);
+            System.out.println("RPC Server is running...");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+  </code></pre>
+  <h2>RPCClient.java</h2>
+    <pre><code class="language-java">
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+
+public class RPCClient {
+    public static void main(String[] args) {
+        try {
+            // Locate registry
+            Registry registry = LocateRegistry.getRegistry("localhost", 5000);
+            // Lookup remote object
+            RPCInterface stub = (RPCInterface) registry.lookup("RPCService");
+            // Call remote methods
+            System.out.println("Addition Result: " + stub.add(5, 3));
+            System.out.println(stub.sayHello("Akash"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+<h2>Running<h2>
+
+rmiregistry
+
+
+  </code></pre>
+</body>
+</html>

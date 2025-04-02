@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Write a program to implement Daytime Server and Client using RMI  </title>
+</head>
+<body>
+    <h1>Write a program to implement Daytime Server and Client using RMI </h1>
+    
+    <h2>Daytime.java</h2>
+    <pre><code class="language-java">
+// Filename: Daytime.java
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+import java.time.LocalDateTime;
+
+public interface Daytime extends Remote {
+    String getDaytime() throws RemoteException;
+}
+
+
+
+  </code></pre>
+  
+  <h2>DaytimeImpl.java</h2>
+  <pre><code class="language-java">
+// Filename: DaytimeImpl.java
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+public class DaytimeImpl extends UnicastRemoteObject implements Daytime {
+    public DaytimeImpl() throws RemoteException {
+        super(); // Exports the object
+    }
+
+    @Override
+    public String getDaytime() throws RemoteException {
+        LocalDateTime now = LocalDateTime.now();
+        return now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    }
+}
+
+
+
+
+  </code></pre>
+  
+  
+  <h2>Server.java</h2>
+  <pre><code class="language-java">
+// Filename: Server.java
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+
+public class Server {
+    public static void main(String[] args) {
+        try {
+            // Create RMI registry on port 1099
+            Registry registry = LocateRegistry.createRegistry(1099);
+
+            // Create and bind the remote object
+            Daytime daytimeService = new DaytimeImpl();
+            registry.rebind("DaytimeService", daytimeService);
+
+            System.out.println("Daytime Server is running...");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+  </code></pre>
+  
+  
+  <h2>Client.java</h2>
+  <pre><code class="language-java">
+// Filename: Client.java
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+
+public class Client {
+    public static void main(String[] args) {
+        try {
+            // Connect to RMI registry on localhost:1099
+            Registry registry = LocateRegistry.getRegistry("localhost", 1099);
+
+            // Lookup the remote object
+            Daytime daytimeService = (Daytime) registry.lookup("DaytimeService");
+
+            // Invoke remote method
+            String currentTime = daytimeService.getDaytime();
+            System.out.println("Current server time: " + currentTime);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+
+  </code></pre>
+  <h2>Running</h2>
+  pre><code class="language-java">
+1. Compile all Java files
+  javac *.java
+
+2.Start RMI Registry
+rmiregistry &
+
+3. Run the Server
+java Server
+
+4.Run the Client
+java Client
+
+
+
+  
+  
+  
+</body>
+</html>

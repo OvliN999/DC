@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Write a program to implement EchoClient and Echoserver program using TCP and UDP
+ sockets.  </title>
+</head>
+<body>
+    <h1>Write a program to implement EchoClient and Echoserver program using TCP and UDP
+ sockets.   </h1>
+    
+    <h2>TCPEchoServer.java</h2>
+    <pre><code class="language-java">
+import java.io.*;
+import java.net.*;
+
+public class TCPEchoServer {
+    public static void main(String[] args) {
+        int port = 5000;
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            System.out.println("TCP Echo Server started on port " + port);
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                new Thread(new ClientHandler(clientSocket)).start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+class ClientHandler implements Runnable {
+    private Socket clientSocket;
+
+    public ClientHandler(Socket socket) {
+        this.clientSocket = socket;
+    }
+
+    public void run() {
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
+            String message;
+            while ((message = in.readLine()) != null) {
+                System.out.println("Received: " + message);
+                out.println(message); // Echo back
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+
+
+
+    </code></pre>
+
+    <h2>UDPEchoServer.java</h2>
+    <pre><code class="language-java">
+import java.net.*;
+
+public class UDPEchoServer {
+    public static void main(String[] args) {
+        int port = 6000;
+        byte[] buffer = new byte[1024];
+
+        try (DatagramSocket socket = new DatagramSocket(port)) {
+            System.out.println("UDP Echo Server started on port " + port);
+
+            while (true) {
+                DatagramPacket request = new DatagramPacket(buffer, buffer.length);
+                socket.receive(request);
+                String receivedMsg = new String(request.getData(), 0, request.getLength());
+                System.out.println("Received: " + receivedMsg);
+
+                DatagramPacket response = new DatagramPacket(
+                        request.getData(), request.getLength(),
+                        request.getAddress(), request.getPort()
+                );
+                socket.send(response);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+</code></pre>
+
+    <h2>UDPEchoClient.java</h2>
+    <pre><code class="language-java">
+import java.net.*;
+import java.util.Scanner;
+
+public class UDPEchoClient {
+    public static void main(String[] args) {
+        String serverAddress = "localhost";
+        int port = 6000;
+        byte[] buffer = new byte[1024];
+
+        try (DatagramSocket socket = new DatagramSocket();
+             Scanner scanner = new Scanner(System.in)) {
+
+            InetAddress serverIP = InetAddress.getByName(serverAddress);
+            System.out.println("Connected to UDP Echo Server. Type your message:");
+
+            while (true) {
+                String message = scanner.nextLine();
+                if (message.equalsIgnoreCase("exit")) break;
+
+                DatagramPacket request = new DatagramPacket(
+                        message.getBytes(), message.length(), serverIP, port);
+                socket.send(request);
+
+                DatagramPacket response = new DatagramPacket(buffer, buffer.length);
+                socket.receive(response);
+                String echoedMsg = new String(response.getData(), 0, response.getLength());
+                System.out.println("Server echoed: " + echoedMsg);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+  </code></pre>
+</body>
+</html>

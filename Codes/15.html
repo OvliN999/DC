@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Write a program to translate dotted decimal IP address into 32 bit address.  </title>
+</head>
+<body>
+    <h1>Write a program to translate dotted decimal IP address into 32 bit address.    </h1>
+    
+    <h2>IPToBinary</h2>
+    <pre><code class="language-java">
+import java.util.Scanner;
+
+public class IPToBinary {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter an IP address (e.g., 192.168.1.1): ");
+        String ipAddress = scanner.nextLine();
+        scanner.close();
+
+        try {
+            int ipAsInt = convertTo32Bit(ipAddress);
+            System.out.println("32-bit integer representation: " + ipAsInt);
+            System.out.println("Binary representation: " + Integer.toBinaryString(ipAsInt));
+        } catch (IllegalArgumentException e) {
+            System.out.println("Invalid IP address format.");
+        }
+    }
+
+    public static int convertTo32Bit(String ipAddress) {
+        String[] parts = ipAddress.split("\\.");
+        if (parts.length != 4) {
+            throw new IllegalArgumentException("Invalid IP address format.");
+        }
+
+        int result = 0;
+        for (String part : parts) {
+            int num = Integer.parseInt(part);
+            if (num < 0 || num > 255) {
+                throw new IllegalArgumentException("Invalid IP address format.");
+            }
+            result = (result << 8) | num;
+        }
+        return result;
+    }
+}
+
+
+
+  </code></pre>
+</body>
+</html>

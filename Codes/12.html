@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>The socket server will return your full name (e.g., Yih-Feng Hwang) to a client
+ when the socket server receives any request from the client.  </title>
+</head>
+<body>
+    <h1>The socket server will return your full name (e.g., Yih-Feng Hwang) to a client
+ when the socket server receives any request from the client.  </h1>
+    
+    <h2>SocketServer.java</h2>
+    <pre><code class="language-java">
+import java.io.*;
+import java.net.*;
+
+public class SocketServer {
+    public static void main(String[] args) {
+        int port = 5000; // Port number for the server
+
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            System.out.println("Server is running on port " + port + "...");
+
+            while (true) {
+                // Accept client connection
+                Socket socket = serverSocket.accept();
+                System.out.println("Client connected: " + socket.getInetAddress());
+
+                // Send full name to client
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                out.println("Yih-Feng Hwang"); // Change this to your full name
+
+                // Close the connection
+                socket.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+
+
+
+    </code></pre>
+
+    <h2>SocketClient.java</h2>
+    <pre><code class="language-java">
+import java.io.*;
+import java.net.*;
+
+public class SocketClient {
+    public static void main(String[] args) {
+        String serverAddress = "localhost"; // Change to the server's IP if running remotely
+        int port = 5000;
+
+        try (Socket socket = new Socket(serverAddress, port)) {
+            // Read response from server
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            String response = in.readLine();
+
+            // Print server response
+            System.out.println("Server response: " + response);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+  
+
+  </code></pre>
+</body>
+</html>

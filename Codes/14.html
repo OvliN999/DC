@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create a socket program for HTTP web page upload and download .  </title>
+</head>
+<body>
+    <h1>Create a socket program for HTTP web page upload and download .   </h1>
+    
+    <h2>HTTPServer.java</h2>
+    <pre><code class="language-java">
+import java.io.*;
+import java.net.*;
+
+public class HTTPServer {
+    private static final int PORT = 8080;
+    private static final String UPLOAD_DIR = "uploads/";
+
+    public static void main(String[] args) {
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            System.out.println("Server started on port " + PORT);
+            File uploadDir = new File(UPLOAD_DIR);
+            if (!uploadDir.exists()) {
+                uploadDir.mkdir();
+            }
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                new Thread(new ClientHandler(clientSocket)).start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+class ClientHandler implements Runnable {
+    private Socket clientSocket;
+
+    public ClientHandler(Socket socket) {
+        this.clientSocket = socket;
+    }
+
+    @Override
+    public void run() {
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
+
+            String request = in.readLine();
+            if (request.startsWith("UPLOAD")) {
+                String fileName = request.split(" ")[1];
+                saveFile(fileName, in);
+                out.println("UPLOAD SUCCESS: " + fileName);
+            } else if (request.startsWith("DOWNLOAD")) {
+                String fileName = request.split(" ")[1];
+                sendFile(fileName, out);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void saveFile(String fileName, BufferedReader in) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("uploads/" + fileName))) {
+            String line;
+            while (!(line = in.readLine()).equals("EOF")) {
+                writer.write(line);
+                writer.newLine();
+            }
+        }
+    }
+
+    private void sendFile(String fileName, PrintWriter out) throws IOException {
+        File file = new File("uploads/" + fileName);
+        if (file.exists()) {
+            out.println("FILE_FOUND");
+            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    out.println(line);
+                }
+            }
+            out.println("EOF");
+        } else {
+            out.println("FILE_NOT_FOUND");
+        }
+    }
+}
+
+
+
+
+
+
+
+
+    </code></pre>
+
+    <h2>HTTPClient.java</h2>
+    <pre><code class="language-java">
+import java.io.*;
+import java.net.*;
+
+public class HTTPClient {
+    private static final String SERVER_ADDRESS = "localhost";
+    private static final int SERVER_PORT = 8080;
+
+    public static void main(String[] args) {
+        try (Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
+
+            BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
+            System.out.println("Enter command (UPLOAD <filename> / DOWNLOAD <filename>):");
+            String command = userInput.readLine();
+            out.println(command);
+
+            if (command.startsWith("UPLOAD")) {
+                String fileName = command.split(" ")[1];
+                sendFile(fileName, out);
+                System.out.println(in.readLine()); // Upload response
+            } else if (command.startsWith("DOWNLOAD")) {
+                String fileName = command.split(" ")[1];
+                receiveFile(fileName, in);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void sendFile(String fileName, PrintWriter out) throws IOException {
+        File file = new File(fileName);
+        if (file.exists()) {
+            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    out.println(line);
+                }
+            }
+            out.println("EOF");
+        } else {
+            System.out.println("File not found!");
+        }
+    }
+
+    private static void receiveFile(String fileName, BufferedReader in) throws IOException {
+        String response = in.readLine();
+        if ("FILE_FOUND".equals(response)) {
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter("downloads/" + fileName))) {
+                String line;
+                while (!(line = in.readLine()).equals("EOF")) {
+                    writer.write(line);
+                    writer.newLine();
+                }
+            }
+            System.out.println("File downloaded successfully: " + fileName);
+        } else {
+            System.out.println("File not found on server.");
+        }
+    }
+}
+
+
+
+
+
+  </code></pre>
+</body>
+</html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Write a program to implement reliable multicast API.  </title>
+</head>
+<body>
+    <h1>Write a program to implement reliable multicast API. </h1>
+    
+    <h2>Message.java</h2>
+    <pre><code class="language-java">
+import java.io.Serializable;
+
+public class Message implements Serializable {
+    private String senderId;
+    private long sequenceNumber;
+    private String data;
+    private int senderUnicastPort;
+
+    public Message(String senderId, long sequenceNumber, String data, int senderUnicastPort) {
+        this.senderId = senderId;
+        this.sequenceNumber = sequenceNumber;
+        this.data = data;
+        this.senderUnicastPort = senderUnicastPort;
+    }
+
+    public String getSenderId() { return senderId; }
+    public long getSequenceNumber() { return sequenceNumber; }
+    public String getData() { return data; }
+    public int getSenderUnicastPort() { return senderUnicastPort; }
+}
+<h2>Ack.java</h2>
+    <pre><code class="language-java">
+// Ack.java
+import java.io.Serializable;
+
+public class Ack implements Serializable {
+    private String senderId;
+    private long sequenceNumber;
+    private String memberId;
+
+    public Ack(String senderId, long sequenceNumber, String memberId) {
+        this.senderId = senderId;
+        this.sequenceNumber = sequenceNumber;
+        this.memberId = memberId;
+    }
+
+    public String getSenderId() { return senderId; }
+    public long getSequenceNumber() { return sequenceNumber; }
+    public String getMemberId() { return memberId; }
+}
+
+
+  </code></pre>
+  
+  <h2>Server.java</h2>
+  <pre><code class="language-java">
+import java.io.IOException;
+
+public class Server {
+    public static void main(String[] args) throws IOException {
+        ReliableMulticastMember member = new ReliableMulticastMember("230.0.0.1", 4446);
+        member.send("Hello, Multicast Group!");
+    }
+}
+
+
+
+  </code></pre>
+  
+  
+  <h2>Client.java</h2>
+  <pre><code class="language-java">
+
+import java.io.IOException;
+
+public class Client {
+    public static void main(String[] args) throws IOException {
+        ReliableMulticastMember member = new ReliableMulticastMember("230.0.0.1", 4446);
+    }
+}
+
+
+
+  </code></pre>
+  
+  
+  <h2>ReliableMulticastMember.java</h2>
+  <pre><code class="language-java">
+
+import java.io.*;
+import java.net.*;
+import java.util.*;
+import java.util.concurrent.*;
+
+public class ReliableMulticastMember {
+    private String memberId;
+    private MulticastSocket multicastSocket;
+    private DatagramSocket unicastSocket;
+    private InetAddress group;
+    private int port;
+    private long sequenceNumber = 0;
+    private Map<String, Long> receivedSeqNums = new ConcurrentHashMap<>();
+    private Map<Long, Set<String>> pendingAcks = new ConcurrentHashMap<>();
+
+    public ReliableMulticastMember(String multicastAddress, int port) throws IOException {
+        this.group = InetAddress.getByName(multicastAddress);
+        this.port = port;
+        this.multicastSocket = new MulticastSocket(port);
+
+        // Fix deprecated joinGroup
+        NetworkInterface networkInterface = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
+        multicastSocket.joinGroup(new InetSocketAddress(group, port), networkInterface);
+
+        this.unicastSocket = new DatagramSocket();
+        this.memberId = InetAddress.getLocalHost().getHostAddress() + ":" + unicastSocket.getLocalPort();
+
+        startReceiverThread();
+        startAckProcessorThread();
+    }
+
+    public void send(String data) throws IOException {
+        long seq = sequenceNumber++;
+        Message msg = new Message(memberId, seq, data, unicastSocket.getLocalPort());
+        byte[] buffer = serialize(msg);
+        DatagramPacket packet = new DatagramPacket(buffer, buffer.length, group, port);
+        multicastSocket.send(packet);
+
+        pendingAcks.put(seq, ConcurrentHashMap.newKeySet());
+        scheduleRetransmission(seq, packet);
+    }
+
+    private void scheduleRetransmission(long seq, DatagramPacket packet) {
+        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+        executor.scheduleAtFixedRate(() -> {
+            if (!pendingAcks.get(seq).isEmpty()) {
+                try {
+                    multicastSocket.send(packet);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                executor.shutdown();
+                pendingAcks.remove(seq);
+            }
+        }, 1, 1, TimeUnit.SECONDS);
+    }
+
+    private void startReceiverThread() {
+        new Thread(() -> {
+            byte[] buffer = new byte[65535];
+            while (true) {
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                try {
+                    multicastSocket.receive(packet);
+                    Object obj = deserialize(packet.getData(), packet.getLength());
+                    if (obj instanceof Message) {
+                        Message msg = (Message) obj;
+                        if (isNewMessage(msg)) {
+                            System.out.println("Received: " + msg.getData());
+                            sendAck(msg, packet.getAddress());
+                        }
+                    }
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    private void sendAck(Message msg, InetAddress senderAddr) throws IOException {
+        Ack ack = new Ack(msg.getSenderId(), msg.getSequenceNumber(), memberId);
+        byte[] ackBuffer = serialize(ack);
+        DatagramPacket ackPacket = new DatagramPacket(
+            ackBuffer, ackBuffer.length, senderAddr, msg.getSenderUnicastPort()
+        );
+        unicastSocket.send(ackPacket);
+    }
+
+    private void startAckProcessorThread() {
+        new Thread(() -> {
+            byte[] buffer = new byte[65535];
+            while (true) {
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                try {
+                    unicastSocket.receive(packet);
+                    Object obj = deserialize(packet.getData(), packet.getLength());
+                    if (obj instanceof Ack) {
+                        Ack ack = (Ack) obj;
+                        pendingAcks.computeIfPresent(ack.getSequenceNumber(), (k, v) -> {
+                            v.add(ack.getMemberId());
+                            return v;
+                        });
+                    }
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    private boolean isNewMessage(Message msg) {
+        return receivedSeqNums.getOrDefault(msg.getSenderId(), -1L) < msg.getSequenceNumber();
+    }
+
+    private byte[] serialize(Serializable obj) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(obj);
+        return baos.toByteArray();
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T deserialize(byte[] data, int length) throws IOException, ClassNotFoundException {
+        ByteArrayInputStream bais = new ByteArrayInputStream(data, 0, length);
+        ObjectInputStream ois = new ObjectInputStream(bais);
+        return (T) ois.readObject();
+    }
+}
+
+</body>
+</html>
