@@ -36,8 +36,10 @@ class ClientHandler implements Runnable {
     }
 
     public void run() {
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
+        try (
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)
+        ) {
             String message;
             while ((message = in.readLine()) != null) {
                 System.out.println("Received: " + message);
@@ -49,6 +51,36 @@ class ClientHandler implements Runnable {
     }
 }
 
+</code></pre>
+
+   <h2>TCPEchoClient.java</h2>
+   <pre><code class="language-java">
+
+import java.io.*;
+import java.net.*;
+
+public class TCPEchoClient {
+    public static void main(String[] args) {
+        String serverAddress = "localhost";
+        int port = 5000;
+        try (
+            Socket socket = new Socket(serverAddress, port);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in))
+        ) {
+            System.out.println("Connected to TCP Echo Server. Type your message:");
+            String message;
+            while ((message = userInput.readLine()) != null) {
+                out.println(message);
+                System.out.println("Server echoed: " + in.readLine());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+       
 
 
 
